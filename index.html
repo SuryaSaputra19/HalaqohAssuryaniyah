@@ -1566,9 +1566,9 @@ function setupFormLayout(page) {
   });
 
   let optSiswa = '<option value="">-- Pilih Siswa --</option>';
-  listSiswa.forEach(siswa => {
-    optSiswa += `<option value="${siswa.nama}">${siswa.nama}</option>`;
-  });
+listSiswa.forEach(siswa => {
+  optSiswa += `<option value="${siswa.nama}" data-kelas="${siswa.kelas}">${siswa.nama}</option>`;
+});
 
   if(page === 'guru') {
     body.innerHTML = `
@@ -1613,8 +1613,8 @@ function setupFormLayout(page) {
     if(currentTab === 'tv-hafalan') {
       body.innerHTML = `
         <div class="form-row">
-          <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="n-nama" class="fi">${optSiswa}</select></div>
-          <div class="form-group"><label class="form-lbl">Kelas</label><select id="n-kelas" class="fi">${optKelas}</select></div>
+          <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="n-nama" class="fi" onchange="autoFillKelasFromSiswa(this,'n-kelas')">${optSiswa}</select></div>
+          <div class="form-group"><label class="form-lbl">Kelas</label><select id="n-kelas" class="fi" onchange="filterSiswaByKelas('n-kelas','n-nama')">${optKelas}</select></div>
         </div>
         <div class="form-group" style="margin-bottom:10px"><label class="form-lbl">Surah</label><input type="text" id="n-surah" class="fi"></div>
         <div class="form-row">
@@ -1636,8 +1636,8 @@ function setupFormLayout(page) {
     } else {
       body.innerHTML = `
         <div class="form-row">
-          <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="na-nama" class="fi">${optSiswa}</select></div>
-          <div class="form-group"><label class="form-lbl">Kelas</label><select id="na-kelas" class="fi">${optKelas}</select></div>
+          <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="na-nama" class="fi" onchange="autoFillKelasFromSiswa(this,'na-kelas')">${optSiswa}</select></div>
+          <div class="form-group"><label class="form-lbl">Kelas</label><select id="na-kelas" class="fi" onchange="filterSiswaByKelas('na-kelas','na-nama')">${optKelas}</select></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-lbl">Kedisiplinan</label><input type="number" id="na-disiplin" class="fi" value="0"></div>
@@ -1649,8 +1649,8 @@ function setupFormLayout(page) {
   else if(page === 'absen') {
     body.innerHTML = `
       <div class="form-row">
-        <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="a-nama" class="fi">${optSiswa}</select></div>
-        <div class="form-group"><label class="form-lbl">Kelas</label><select id="a-kelas" class="fi">${optKelas}</select></div>
+        <div class="form-group"><label class="form-lbl">Nama Siswa</label><select id="a-nama" class="fi" onchange="autoFillKelasFromSiswa(this,'a-kelas')">${optSiswa}</select></div>
+        <div class="form-group"><label class="form-lbl">Kelas</label><select id="a-kelas" class="fi" onchange="filterSiswaByKelas('a-kelas','a-nama')">${optKelas}</select></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-lbl">Tanggal</label><input type="date" id="a-tgl" class="fi"></div>
@@ -2043,6 +2043,32 @@ function autoFillHafalanKelas(sel) {
   const opt = sel.options[sel.selectedIndex];
   const kelas = opt.getAttribute('data-kelas');
   const kelasSelect = document.getElementById('h-kelas');
+  if(kelas && kelasSelect) kelasSelect.value = kelas;
+}
+
+// Saat Kelas dipilih, filter opsi Nama Siswa agar hanya menampilkan siswa dari kelas tsb
+function filterSiswaByKelas(kelasId, siswaId) {
+  const kelas = document.getElementById(kelasId).value;
+  const siswaSelect = document.getElementById(siswaId);
+  const currentVal = siswaSelect.value;
+  let opts = '<option value="">-- Pilih Siswa --</option>';
+  listSiswa.forEach(siswa => {
+    if(!kelas || siswa.kelas === kelas) {
+      opts += `<option value="${siswa.nama}" data-kelas="${siswa.kelas}">${siswa.nama}</option>`;
+    }
+  });
+  siswaSelect.innerHTML = opts;
+  // pertahankan siswa yang sudah dipilih jika masih ada di daftar hasil filter
+  if([...siswaSelect.options].some(o => o.value === currentVal)) {
+    siswaSelect.value = currentVal;
+  }
+}
+
+// Saat Nama Siswa dipilih, otomatis isikan Kelas sesuai data siswa tsb
+function autoFillKelasFromSiswa(sel, kelasId) {
+  const opt = sel.options[sel.selectedIndex];
+  const kelas = opt ? opt.getAttribute('data-kelas') : '';
+  const kelasSelect = document.getElementById(kelasId);
   if(kelas && kelasSelect) kelasSelect.value = kelas;
 }
 </script>
