@@ -240,6 +240,38 @@
       transition: all 0.2s ease;
     }
 
+    .btn-cetak-group {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.btn-cetak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-cetak:hover {
+  background: var(--bg-app);
+  border-color: var(--color-brand-primary);
+  color: var(--color-brand-primary);
+}
+
+.btn-cetak.pdf i { color: #DC2626; font-size: 15px; }
+.btn-cetak.excel i { color: #16A34A; font-size: 15px; }
+.btn-cetak.word i { color: #2563EB; font-size: 15px; }
+
     .btn-add:hover {
       background: #0B5341;
       transform: translateY(-1px);
@@ -1757,13 +1789,18 @@
           </div>
         </div>
 
-        <div id="pg-nilai" class="paged">
-          <div style="display:flex; gap:8px; margin-bottom:14px;">
-            <select class="fi" style="max-width:200px" id="nilai-filter-kelas" onchange="renderNilaiTables()">
-              <option value="">Semua Kelas</option>
-            </select>
-            <input type="date" id="nilai-filter-date" class="fi" style="max-width:160px" onchange="renderNilaiTables()">
-          </div>
+     <div id="pg-nilai" class="paged">
+  <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+    <select class="fi" style="max-width:200px" id="nilai-filter-kelas" onchange="renderNilaiTables()">
+      <option value="">Semua Kelas</option>
+    </select>
+    <input type="date" id="nilai-filter-date" class="fi" style="max-width:160px" onchange="renderNilaiTables()">
+    <div class="btn-cetak-group">
+      <button class="btn-cetak pdf" onclick="cetakTabelPDF()" title="Cetak ke PDF"><i class="ti ti-file-type-pdf"></i> PDF</button>
+      <button class="btn-cetak excel" onclick="cetakTabelExcel()" title="Cetak ke Excel"><i class="ti ti-file-type-xls"></i> Excel</button>
+      <button class="btn-cetak word" onclick="cetakTabelWord()" title="Cetak ke Word"><i class="ti ti-file-type-doc"></i> Word</button>
+    </div>
+  </div>
 
           <div class="tabs-row">
             <div class="tab on" onclick="switchTab(this,'tv-hafalan')">Hafalan</div>
@@ -1830,13 +1867,18 @@
           </div>
         </div>
 
-        <div id="pg-absen" class="paged">
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input class="fi" type="date" style="max-width:160px" id="absen-filter-date" onchange="renderAbsenTable()">
-            <select class="fi" style="max-width:180px" id="absen-filter-kelas" onchange="renderAbsenTable()">
-              <option value="">Semua Kelas</option>
-            </select>
-          </div>
+       <div id="pg-absen" class="paged">
+  <div style="display:flex;gap:8px;margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+    <input class="fi" type="date" style="max-width:160px" id="absen-filter-date" onchange="renderAbsenTable()">
+    <select class="fi" style="max-width:180px" id="absen-filter-kelas" onchange="renderAbsenTable()">
+      <option value="">Semua Kelas</option>
+    </select>
+    <div class="btn-cetak-group">
+      <button class="btn-cetak pdf" onclick="cetakTabelPDF()" title="Cetak ke PDF"><i class="ti ti-file-type-pdf"></i> PDF</button>
+      <button class="btn-cetak excel" onclick="cetakTabelExcel()" title="Cetak ke Excel"><i class="ti ti-file-type-xls"></i> Excel</button>
+      <button class="btn-cetak word" onclick="cetakTabelWord()" title="Cetak ke Word"><i class="ti ti-file-type-doc"></i> Word</button>
+    </div>
+  </div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -2613,7 +2655,110 @@
         });
       }
     }
+// ============================================================
+// CETAK TABEL (PDF / EXCEL / WORD) - Menu Penilaian & Absensi
+// ============================================================
 
+function tableWrapAktif() {
+  if (currentPage === 'nilai') {
+    return document.querySelector('#' + currentTab + ' .table-wrap');
+  }
+  if (currentPage === 'absen') {
+    return document.querySelector('#pg-absen .table-wrap');
+  }
+  return null;
+}
+
+function infoCetakAktif() {
+  if (currentPage === 'nilai') {
+    let namaTab = { 'tv-hafalan': 'Nilai Hafalan', 'tv-tahsin': 'Nilai Tahsin Ummi', 'tv-akhlak': 'Nilai Adab & Akhlak' }[currentTab] || 'Nilai';
+    let kelas = document.getElementById('nilai-filter-kelas')?.value || '';
+    let tgl = document.getElementById('nilai-filter-date')?.value || '';
+    let sub = [];
+    if (kelas) sub.push('Kelas: ' + kelas);
+    if (tgl) sub.push('Tanggal: ' + tgl);
+    return { judul: 'Laporan ' + namaTab, sub: sub.join(' &bull; ') || 'Semua Data', file: namaTab.replace(/\s+/g, '_') };
+  }
+  if (currentPage === 'absen') {
+    let kelas = document.getElementById('absen-filter-kelas')?.value || '';
+    let tgl = document.getElementById('absen-filter-date')?.value || '';
+    let sub = [];
+    if (kelas) sub.push('Kelas: ' + kelas);
+    if (tgl) sub.push('Tanggal: ' + tgl);
+    return { judul: 'Laporan Absensi', sub: sub.join(' &bull; ') || 'Semua Data', file: 'Absensi' };
+  }
+  return { judul: 'Laporan Data', sub: '', file: 'Laporan' };
+}
+
+function siapkanTabelCetak() {
+  const wrap = tableWrapAktif();
+  if (!wrap) return null;
+  const clone = wrap.cloneNode(true);
+  const table = clone.querySelector('table');
+  if (!table) return null;
+
+  const headCells = table.querySelectorAll('thead th');
+  const lastHead = headCells[headCells.length - 1];
+  if (lastHead && /aksi/i.test(lastHead.textContent)) {
+    table.querySelectorAll('tr').forEach(tr => {
+      if (tr.lastElementChild) tr.lastElementChild.remove();
+    });
+  }
+  clone.querySelectorAll('.action-btns, button').forEach(el => el.remove());
+
+  return table;
+}
+
+function cetakTabelPDF() {
+  const table = siapkanTabelCetak();
+  if (!table) { alert('Tidak ada tabel untuk dicetak.'); return; }
+  const { judul, sub } = infoCetakAktif();
+  const printWindow = window.open('', '', 'height=650,width=950');
+  printWindow.document.write('<html><head><title>' + judul + '</title>');
+  printWindow.document.write('<style>body{font-family:sans-serif;padding:24px;} h2{text-align:center;margin-bottom:0;} p{text-align:center;margin-top:5px;margin-bottom:20px;color:#555} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px} th{background:#f4f4f4;} .badge{background:none!important;border:none!important;padding:0!important;font-weight:600} .nilai-pill{background:none!important;padding:0!important;font-weight:700}</style>');
+  printWindow.document.write('</head><body>');
+  printWindow.document.write('<h2>' + judul + '</h2>');
+  printWindow.document.write('<p>' + sub + '</p>');
+  printWindow.document.write(table.outerHTML);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  setTimeout(() => { printWindow.print(); }, 250);
+}
+
+function cetakTabelExcel() {
+  const table = siapkanTabelCetak();
+  if (!table) { alert('Tidak ada tabel untuk dicetak.'); return; }
+  const { file } = infoCetakAktif();
+  let csvContent = "data:text/csv;charset=utf-8,";
+  table.querySelectorAll('tr').forEach(tr => {
+    let cells = Array.from(tr.children).map(td => '"' + td.textContent.trim().replace(/"/g, '""') + '"');
+    csvContent += cells.join(",") + "\n";
+  });
+  let encodedUri = encodeURI(csvContent);
+  let link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", file + "_" + (new Date().toISOString().slice(0, 10)) + ".csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function cetakTabelWord() {
+  const table = siapkanTabelCetak();
+  if (!table) { alert('Tidak ada tabel untuk dicetak.'); return; }
+  const { judul, sub, file } = infoCetakAktif();
+  const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + judul + "</title><style>table{border-collapse:collapse;width:100%} td,th{border:1px solid black;padding:5px;font-size:13px} .badge{background:none;border:none;padding:0}</style></head><body>";
+  const footer = "</body></html>";
+  const sourceHTML = header + "<h2 style='text-align:center'>" + judul + "</h2><p style='text-align:center'>" + sub + "</p>" + table.outerHTML + footer;
+
+  const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+  const fileDownload = document.createElement("a");
+  document.body.appendChild(fileDownload);
+  fileDownload.href = source;
+  fileDownload.download = file + '_' + (new Date().toISOString().slice(0, 10)) + '.doc';
+  fileDownload.click();
+  document.body.removeChild(fileDownload);
+}
     function switchTab(el, tvId) {
       currentTab = tvId;
       el.closest('.tabs-row').querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
