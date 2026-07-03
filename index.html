@@ -1997,6 +1997,26 @@
     let isOnline = true;        // status koneksi ke Apps Script (untuk fallback offline)
     let lastLocalChangeAt = 0;  // timestamp perubahan data lokal terakhir (cegah race-condition polling)
 
+    // Normalisasi berbagai format tanggal yang mungkin masuk ke aplikasi menjadi "YYYY-MM-DD"
+    // versi LOKAL (bukan UTC). Diperlukan karena Google Sheets/Apps Script sering
+    // mengembalikan tanggal sebagai ISO string UTC (mis. "2026-07-02T17:00:00.000Z"),
+    // yang kalau dipotong mentah-mentah (slice) akan salah tanggal untuk pengguna di
+    // timezone selain UTC (mis. WIB/GMT+7). Fungsi ini mem-parsing sebagai Date lalu
+    // mengambil komponen tanggal lokal, sehingga tanggal yang tampil = tanggal yang
+    // dimaksud pengguna, bukan tanggal versi UTC.
+    function normalizeTgl(v) {
+      if (!v) return '';
+      let s = String(v).trim();
+      // Sudah format polos "YYYY-MM-DD" (tanpa komponen waktu) -> pakai langsung
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      let d = new Date(s);
+      if (isNaN(d.getTime())) return s.slice(0, 10); // fallback kalau tidak bisa di-parse
+      let yyyy = d.getFullYear();
+      let mm = String(d.getMonth() + 1).padStart(2, '0');
+      let dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     // Simpan data ke localStorage (cache lokal, instan) SEKALIGUS kirim ke Google Sheet.
     // Fungsi ini menggantikan pemanggilan localStorage.setItem() langsung di seluruh app,
     // jadi seluruh alur/fitur input-edit-hapus yang sudah ada TETAP SAMA PERSIS.
@@ -2478,7 +2498,7 @@
         hBody.innerHTML = '';
         let filteredHafalan = listNilaiHafalan.filter(n =>
           (filterKelas === '' || n.kelas === filterKelas) &&
-          (filterDate === '' || String(n.tgl || '').slice(0, 10) === filterDate || !n.tgl)
+          (filterDate === '' || normalizeTgl(n.tgl) === filterDate || !n.tgl)
         );
         if (filteredHafalan.length === 0) {
           hBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">Tidak ada data rekapan nilai kelas ini.</td></tr>`;
@@ -2499,7 +2519,7 @@
         let filteredTahsin = listNilaiTahsin.filter(n => {
           let siswaObj = listSiswa.find(s => s.nama === n.nama);
           let classMatch = (filterKelas === '' || (siswaObj && siswaObj.kelas === filterKelas));
-          let dateMatch = (filterDate === '' || String(n.tgl || '').slice(0, 10) === filterDate || !n.tgl);
+          let dateMatch = (filterDate === '' || normalizeTgl(n.tgl) === filterDate || !n.tgl);
           return classMatch && dateMatch;
         });
 
@@ -2521,7 +2541,7 @@
         aBody.innerHTML = '';
         let filteredAkhlak = listNilaiAkhlak.filter(n =>
           (filterKelas === '' || n.kelas === filterKelas) &&
-          (filterDate === '' || String(n.tgl || '').slice(0, 10) === filterDate || !n.tgl)
+          (filterDate === '' || normalizeTgl(n.tgl) === filterDate || !n.tgl)
         );
 
         if (filteredAkhlak.length === 0) {
@@ -2547,7 +2567,7 @@
       const filterKelas = document.getElementById('absen-filter-kelas')?.value || '';
 
       let filtered = listAbsen.filter(a => {
-        let matchDate = filterDate === '' || String(a.tgl || '').slice(0, 10) === filterDate || !a.tgl;
+        let matchDate = filterDate === '' || normalizeTgl(a.tgl) === filterDate || !a.tgl;
         let matchKelas = filterKelas === '' || a.kelas === filterKelas;
         return matchDate && matchKelas;
       });
@@ -2560,7 +2580,7 @@
           let badgeCls = a.status === 'Hadir' ? 'badge-teal' : a.status === 'Izin' ? 'badge-blue' : 'badge-amber';
           let tr = document.createElement('tr');
           // MODIFIED: Added edit button in table
-          tr.innerHTML = `<td style="color:var(--text-subtle)">${idx + 1}</td><td><b>${a.nama}</b></td><td><span class="badge badge-teal">${a.kelas}</span></td><td>${a.tgl}</td><td><span class="badge ${badgeCls}">${a.status}</span></td><td>${a.ket}</td><td style="text-align:center"><div class="action-btns"><button class="btn-action-row edit" onclick="editAbsenRow(${originalIdx})"><i class="ti ti-edit"></i></button><button class="btn-action-row delete" onclick="hapusAbsenData(${originalIdx})"><i class="ti ti-trash"></i></button></div></td>`;
+          tr.innerHTML = `<td style="color:var(--text-subtle)">${idx + 1}</td><td><b>${a.nama}</b></td><td><span class="badge badge-teal">${a.kelas}</span></td><td>${normalizeTgl(a.tgl)}</td><td><span class="badge ${badgeCls}">${a.status}</span></td><td>${a.ket}</td><td style="text-align:center"><div class="action-btns"><button class="btn-action-row edit" onclick="editAbsenRow(${originalIdx})"><i class="ti ti-edit"></i></button><button class="btn-action-row delete" onclick="hapusAbsenData(${originalIdx})"><i class="ti ti-trash"></i></button></div></td>`;
           aBody.appendChild(tr);
         });
       }
@@ -2753,7 +2773,7 @@
       document.getElementById('modalTitle').textContent = 'Edit Data Absensi';
       document.getElementById('a-nama').value = a.nama;
       document.getElementById('a-kelas').value = a.kelas;
-      document.getElementById('a-tgl').value = a.tgl;
+      document.getElementById('a-tgl').value = normalizeTgl(a.tgl);
       document.getElementById('a-status').value = a.status;
       document.getElementById('a-ket').value = a.ket;
       document.getElementById('modalForm').classList.add('show');
